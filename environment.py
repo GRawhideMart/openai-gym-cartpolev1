@@ -7,7 +7,7 @@ import torch.optim as optim
 from device import standard as device
 from memory import ReplayMemory
 from model import DQN
-from model.optimize import optimize_model
+from model.optimize import PolicyOptimizer
 from utils.functions import plot_durations, select_action
 from utils.hyperparameters import BATCH_SIZE, GAMMA, LR, TAU
 
@@ -26,6 +26,13 @@ def launch():
 
     optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
     memory = ReplayMemory(10000)
+
+    policy_optimizer = PolicyOptimizer(optimizer=optimizer,
+                                       memory=memory,
+                                       policy_network=policy_net,
+                                       target_network=target_net,
+                                       BATCH_SIZE=BATCH_SIZE,
+                                       GAMMA=GAMMA)
 
     print(f'Using device: {device}')
     if device == 'cpu':
@@ -54,12 +61,7 @@ def launch():
             state = next_state
 
             # Perform one step of the optimization on the policy network
-            optimize_model(optimizer=optimizer,
-                           memory=memory,
-                           policy_net=policy_net,
-                           target_net=target_net,
-                           GAMMA=GAMMA,
-                           BATCH_SIZE=BATCH_SIZE)
+            policy_optimizer.optimize()
             
             # Soft update of the target network's weights
             # θ′ ← τ θ + (1 −τ )θ′
