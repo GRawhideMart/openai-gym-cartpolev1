@@ -4,6 +4,7 @@ import torch.optim as optim
 from device import standard as device
 from memory import ReplayMemory
 from model import DQN
+from model.optimize import optimize_model
 from utils.hyperparameters import LR
 
 def launch():
