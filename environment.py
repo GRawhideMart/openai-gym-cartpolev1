@@ -69,6 +69,8 @@ def launch():
             policy_net_state_dict = policy_net.state_dict()
             for key in policy_net_state_dict:
                 target_net_state_dict[key] = TAU * policy_net_state_dict[key] + target_net_state_dict[key] * (1-TAU)
+            target_net.load_state_dict(target_net_state_dict)
+            
             if done:
                 episode_durations.append(t+1)
                 plot_durations(episode_durations=episode_durations, show_result = False)
