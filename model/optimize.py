@@ -9,6 +9,7 @@ class PolicyOptimizer:
     
     Parameters:
     optimizer (torch.optim.Optimizer): the optimizer used to update the policy network
+    qlearner (DQLearner): a DQLearner object used to calculate the Q values, expected Q values, and V values for a batch of transitions
     memory (ReplayMemory): a replay memory object containing a collection of transitions
     policy_network (torch.nn.Module): the policy network to be optimized
     target_network (torch.nn.Module): a target network used to compute expected state-action values
