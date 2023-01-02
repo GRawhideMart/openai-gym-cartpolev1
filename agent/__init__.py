@@ -4,6 +4,7 @@ import random
 import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
+from agent.DQLearner import DQLearner
 
 from memory import ReplayMemory
 
@@ -34,7 +35,9 @@ class Agent:
         self.target_network.load_state_dict(self.policy_network.state_dict())
         self.optimizer = optim.AdamW(self.policy_network.parameters(), lr=LR, amsgrad=True)
         self.memory = ReplayMemory(capacity=memory_capacity)
+        self.dq_learner = DQLearner(memory=self.memory, policy_network=self.policy_network, target_network=self.target_network)
         self.policy_optimizer = PolicyOptimizer(optimizer=self.optimizer,
+                                       qlearner = self.dq_learner,
                                        memory=self.memory,
                                        policy_network=self.policy_network,
                                        target_network=self.target_network,
@@ -43,69 +46,7 @@ class Agent:
         self.steps_done = 0
         self.episode_durations = []
 
-    def train(self):
-        """
-        Trains the agent on the environment.
-        """
-        plt.ion()
-        num_episodes = 600 if self.device == 'cuda' else 50
-        for i_episode in range(num_episodes):
-            state = self._compute_state()
-            for t in count():
-                action, observation, reward, terminated, truncated = self._play_step(state=state)
-                done = terminated or truncated
-                next_state = self._compute_next_state(terminated, observation)
-
-                # Store the transition in memory
-                self.memory.push(state, action, next_state, reward)
-                # Move to next state
-                state = next_state
-
-                # Perform one step of the optimization on the policy network
-                self._optimize()
-
-                # Soft update of the target network's weights
-                # θ′ ← τ θ + (1 −τ )θ′
-                self._soft_update()
-
-                if done:
-                    self.episode_durations.append(t+1)
-                    self._plot_durations(show_result=False)
-                    break
-                self.environment.render()
-        self._train_end_routine()
-
-    def _optimize(self):
-        """
-        (Inherited from PolicyOptimizer)
-        Optimizes the policy network using a batch of transitions from the memory object.
-        
-        Returns:
-        None
-        
-        """
-        self.policy_optimizer.optimize()
-
-    def _soft_update(self):
-        """Soft update of the target network's weights.
-        θ′ ← τ θ + (1 − τ) θ′
-
-        Parameters
-        ----------
-        self : object
-            Agent object
-
-        Returns
-        -------
-        None
-        """
-        policy_net_state_dict = self.policy_network.state_dict()
-        target_net_state_dict = self.target_network.state_dict()
-        for key in policy_net_state_dict:
-                target_net_state_dict[key] = TAU * policy_net_state_dict[key] + target_net_state_dict[key] * (1-TAU)
-        self.target_network.load_state_dict(target_net_state_dict)
-
-    def _select_action(self, state, policy_network, environment):
+    def act(self, state):
         """
         Selects an action from the given policy network using an epsilon-greedy strategy.
 
@@ -125,11 +66,47 @@ class Agent:
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return policy_network(state).max(1)[1].view(1, 1)
+                return self.policy_network(state).max(1)[1].view(1, 1)
         else:
-            return torch.tensor([[environment.action_space.sample()]], device=device, dtype=torch.long)
+            return torch.tensor([[self.environment.action_space.sample()]], device=device, dtype=torch.long)
 
-    def _compute_state(self):
+    def cache(self, state, action, next_state, reward):
+        self.memory.push(state, action, next_state, reward)
+    
+    def think(self):
+        self.policy_optimizer.optimize()
+        
+    def learn(self):
+        """
+        Trains the agent on the environment.
+        """
+        plt.ion()
+        num_episodes = 600 if self.device == 'cuda' else 50
+        for i_episode in range(num_episodes):
+            current_state = self.observe()
+            for t in count():
+                action = self.act(current_state)
+                observation, reward, terminated, truncated = self._play_step(action=action)
+                done = terminated or truncated
+                next_state = self._compute_next_state(terminated, observation)
+
+                # Store the transition in memory
+                self.cache(current_state, action, next_state, reward)
+
+                # Move to next state
+                current_state = next_state
+                
+                # Optimize the network based on current states
+                self.think()
+
+                if done:
+                    self.episode_durations.append(t+1)
+                    self._plot_durations(show_result=False)
+                    break
+                self.environment.render()
+        self._train_end_routine()    
+
+    def observe(self):
         """Computes the state of the environment.
     
         Returns:
@@ -138,7 +115,7 @@ class Agent:
         state, info = self.environment.reset()
         return torch.tensor(state, dtype=torch.float32, device=self.device).unsqueeze(0)
 
-    def _play_step(self, state):
+    def _play_step(self, action):
         """
         Play a single step of the game, by selecting an action, taking it, and returning the resulting observations, rewards, and termination status.
 
@@ -152,11 +129,9 @@ class Agent:
         - terminated (bool): whether the game terminated
         - truncated (bool): whether the game terminated due to reaching the maximum number of steps
         """
-        action = self._select_action(state=state, policy_network=self.policy_network, environment=self.environment)
         observation, reward, terminated, truncated, _ = self.environment.step(action.item())
         reward = torch.tensor([reward], device=self.device)
-        done = terminated or truncated
-        return action, observation, reward, terminated, truncated
+        return observation, reward, terminated, truncated
     
     def _compute_next_state(self, terminated, observation):
         """
@@ -205,5 +180,5 @@ class Agent:
         print('Complete')
         self._plot_durations(show_result=True)
         plt.ioff()
-        plt.show()
         print('Close the plot to exit')
+        plt.show()

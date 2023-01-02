@@ -9,7 +9,7 @@ def launch():
     # env = Environment()
 
     agent = Agent(environment=env, memory_capacity=10000)
-    agent.train()
+    agent.learn()
 
 if __name__ == '__main__':
     launch()
