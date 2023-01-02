@@ -71,9 +71,27 @@ class Agent:
             return torch.tensor([[self.environment.action_space.sample()]], device=device, dtype=torch.long)
 
     def cache(self, state, action, next_state, reward):
+        """
+        Caches a transition in the replay memory.
+
+        Args:
+            state (torch.Tensor): The current state of the environment.
+            action (torch.Tensor): The action taken in the current state.
+            next_state (torch.Tensor): The next state resulting from taking the action in the current state.
+            reward (float): The reward received after taking the action in the current state.
+
+        Returns:
+            None
+        """
         self.memory.push(state, action, next_state, reward)
     
     def think(self):
+        """
+        Optimizes the policy network using the transitions stored in the replay memory.
+
+        Returns:
+            None
+        """
         self.policy_optimizer.optimize()
         
     def learn(self):
@@ -100,6 +118,7 @@ class Agent:
                 self.think()
 
                 if done:
+                    print(f"Episode {i_episode+1} finished after {t} steps.\n")
                     self.episode_durations.append(t+1)
                     self._plot_durations(show_result=False)
                     break

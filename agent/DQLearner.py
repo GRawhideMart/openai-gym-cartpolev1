@@ -4,12 +4,32 @@ from utils.hyperparameters import BATCH_SIZE, GAMMA
 from device import standard as device
 
 class DQLearner:
+    """
+    A deep Q-learning agent that uses a policy network and a target network to learn to interact with an environment. The agent stores transitions in a replay memory and optimizes the policy network using these transitions.
+    """
     def __init__(self, memory, policy_network, target_network):
+        """
+        Initializes the DQLearner object.
+        
+        Parameters:
+        memory (ReplayMemory): the replay memory used by the agent to store transitions
+        policy_network (nn.Module): the policy network used by the agent to make decisions
+        target_network (nn.Module): the target network used by the agent to stabilize training of the policy network
+        
+        Returns:
+        None
+        """
         self.memory = memory
         self.policy_network = policy_network
         self.target_network = target_network
 
     def calculate(self):
+        """
+        Calculates the Q values, expected Q values, and V values for a batch of transitions from the replay memory.
+        
+        Returns:
+        Tuple[torch.Tensor, torch.Tensor, torch.Tensor]: a tuple containing the Q values, expected Q values, and V values
+        """
         batch = self._sample_transitions()
         state_b, action_b, non_final_next_states_b, reward_b = self._single_batches(batch)
         state_action_values = self._q_values(states=state_b, actions=action_b)
@@ -19,7 +39,7 @@ class DQLearner:
 
     def _sample_transitions(self):
         """
-        Samples a batch of transitions from the agent's memory.
+        Samples a batch of transitions from the agent's replay memory.
         
         Returns:
         Transition: a batch of transitions
