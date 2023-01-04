@@ -7,7 +7,7 @@ To install and run this repository, you will need to have [conda](https://docs.c
 2. Navigate to the repository directory using `cd openai-gym-cartpolev1`
 3. Create a new conda environment using `conda create --name openai-gym-cartpolev1`
 4. Activate the new environment using `conda activate openai-gym-cartpolev1`
-5. Install the required packages using `conda install --file=requirements.txt`
+5. Install the required packages using `conda install --file requirements.txt`
 
 ## Agent and Memory
 The agent has a memory which stores the states, actions, and rewards that it experiences as it interacts with the environment. This memory is used to update the agent's Q-values, which represent the expected reward for taking a particular action in a given state. The agent uses these Q-values to decide which action to take in each state, with the goal of maximizing its overall reward.
